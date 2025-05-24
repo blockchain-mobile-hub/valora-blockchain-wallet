@@ -1,0 +1,30 @@
+name: E2E - iOS
+on:
+  workflow_call:
+    inputs:
+      ios-version:
+        required: true
+        type: string
+
+jobs:
+  ios:
+    name: iOS (${{ inputs.ios-version  }})
+    # We use custom runners to speed up the build
+    # Replace this with `macos-14` to run on standard GitHub Actions runners
+    # runs-on: macos-14
+    runs-on: ios-e2e-group
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - run: brew install fastlane cocoapods
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        id: setup-node
+        with:
+          node-version-file: 'package.json'
+          check-latest: true
+      - uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # 8.2.1
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: yarn install
+      - run: eas build --platform ios --profile e2e --local

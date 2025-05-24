@@ -1,0 +1,70 @@
+name: E2E - Android
+on:
+  workflow_call:
+    inputs:
+      android-api-level:
+        required: true
+        type: number
+
+jobs:
+  android:
+    name: Android (SDK ${{ inputs.android-api-level }})
+    # We use custom runners to speed up the build
+    # Replace this with `ubuntu-latest` to run on standard GitHub Actions runners
+    runs-on:
+      - nscloud-ubuntu-22.04-amd64-16x64-with-cache
+      - nscloud-cache-size-20gb
+      - nscloud-cache-tag-wallet-e2e-android
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set env
+        run: |
+          ANDROID_HOME="$HOME/android-tools"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+          echo "$ANDROID_HOME/emulator" >> $GITHUB_PATH
+          echo "ANDROID_SDK_ROOT=" >> $GITHUB_ENV
+      # See https://namespace.so/docs/actions/nscloud-cache-action
+      - name: Cache
+        uses: namespacelabs/nscloud-cache-action@v1
+        with:
+          cache: gradle
+          path: ${{ env.ANDROID_HOME}}
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        id: setup-node
+        with:
+          node-version-file: 'package.json'
+          check-latest: true
+      - name: Setup runner
+        run: |
+          set -x
+
+          mkdir -p $ANDROID_HOME
+
+          curl https://dl.google.com/android/repository/commandlinetools-linux-6858069_latest.zip -o cli-tools.zip
+          unzip cli-tools.zip -d "$ANDROID_HOME/cmdline-tools"
+          # Command line tools need to be placed in $ANDROID_HOME/cmdline-tools/latest to function properly
+          # and because we cache $ANDROID_HOME, we need remove the existing version and move the new one
+          rm -rf "$ANDROID_HOME/cmdline-tools/latest"
+          mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+
+          # Temporarily disable checking for EPIPE error and use yes to accept all licenses
+          set +o pipefail
+          yes | sdkmanager --licenses
+          set -o pipefail
+
+          # Install Ninja
+          sudo apt-get install ninja-build
+        shell: bash
+      - uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # 8.2.1
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: yarn install
+      - run: eas build --platform android --profile e2e --local

@@ -1,0 +1,68 @@
+name: Check
+
+on:
+  # ..any pull request, workflow dispatch and merge queue (covers main)
+  pull_request:
+  workflow_dispatch:
+  merge_group:
+  # Cron job to run checks @ 8:30 pm daily on the latest commit on the default branch - main
+  schedule:
+    - cron: '30 20 * * *'
+
+# Cancel any in progress run of the workflow for a given PR
+# This avoids building outdated code
+concurrency:
+  # Fallback used github.ref_name as it is always defined
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  vulnerability:
+    name: Vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./.github/actions/yarn-install
+      - run: ./scripts/ci_check_vulnerabilities.sh
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./.github/actions/yarn-install
+      - run: yarn run format:check
+      - run: yarn run lint
+      - run: yarn tsc -p .github/scripts
+  yarn-lock:
+    name: 'yarn.lock Up-to-date'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./.github/actions/yarn-install
+      - run: git diff --exit-code
+  licenses:
+    name: Licenses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./.github/actions/yarn-install
+      - run: yarn check-licenses
+  knip:
+    name: Knip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./.github/actions/yarn-install
+      - run: yarn knip
+  # Ensure the release notes script is working
+  release-notes:
+    name: Release Notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Fetch all history for all tags and branches
+          fetch-depth: 0
+      - uses: ./.github/actions/yarn-install
+      - run: yarn generate-release-notes

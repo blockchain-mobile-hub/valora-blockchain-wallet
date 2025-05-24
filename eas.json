@@ -1,0 +1,70 @@
+{
+  "cli": {
+    "version": ">= 5.9.1",
+    "promptToConfigurePushNotifications": false,
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "ios": {
+        "simulator": true
+      }
+    },
+    "e2e": {
+      "withoutCredentials": true,
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_DIVVI_E2E": "true"
+      }
+    },
+    "base": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "node": "22.15.0",
+      "env": {
+        "EXPO_NO_TELEMETRY": "1"
+      }
+    },
+    "mainnet": {
+      "extends": "base",
+      "environment": "production",
+      "env": {
+        "APP_VARIANT": "mainnet"
+      }
+    },
+    "mainnet-nightly": {
+      "extends": "base",
+      "environment": "preview",
+      "env": {
+        "APP_VARIANT": "mainnet-nightly"
+      }
+    }
+  },
+  "submit": {
+    "mainnet": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "completed"
+      },
+      "ios": {
+        "ascAppId": "1520414263",
+        "appleTeamId": "HDPUB8C3KG"
+      }
+    },
+    "mainnet-nightly": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "completed"
+      },
+      "ios": {
+        "ascAppId": "1599290566",
+        "appleTeamId": "HDPUB8C3KG"
+      }
+    }
+  }
+}

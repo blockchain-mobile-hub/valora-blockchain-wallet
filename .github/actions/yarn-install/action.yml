@@ -1,0 +1,27 @@
+name: 'Yarn install'
+description: 'Runs setup node + cache + yarn install'
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      id: setup-node
+      with:
+        node-version-file: 'package.json'
+        check-latest: true
+    - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      with:
+        path: |
+          node_modules
+          */*/node_modules
+        key: ${{ runner.os }}-${{ runner.arch }}-node-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles('**/yarn.lock', 'patches/*.patch') }}
+    - name: Install Yarn dependencies
+      run: |
+        # Deals with yarn (v1) install flakiness
+        yarn || yarn --network-concurrency 1
+        # Another install flakiness fix (at least in yarn v1 with node 20)
+        # yarn postinstall isn't always run (?!) so we run it manually
+        yarn postinstall
+      shell: bash
+    - name: Fail if someone forgot to commit "yarn.lock"
+      run: git diff --exit-code
+      shell: bash
